@@ -354,6 +354,9 @@ const updateFav = (mesId)=>{
     favButtons.forEach(it=>it.classList[isFav ? 'add' : 'remove']('mfc--isFav'));
 };
 
+const onStopped = ()=>{
+    isListening = false;
+};
 const onMessageDone = async(mesIdx)=>{
     addSwipesButton(mesIdx, true);
     makeSwipeDom();
@@ -618,7 +621,7 @@ eventSource.on(event_types.APP_READY, ()=>{
     onChatChanged();
 
     eventSource.on(event_types.GENERATION_STARTED, async(...args)=>{log('GENERATION_STARTED', args);onGenerationStarted(...args);return;});
-    eventSource.on(event_types.GENERATION_STOPPED, async(...args)=>{log('GENERATION_STOPPED', args);onMessageDone(...args);return;});
+    eventSource.on(event_types.GENERATION_STOPPED, async(...args)=>{log('GENERATION_STOPPED', args);onStopped();return;});
     eventSource.on(event_types.CHARACTER_MESSAGE_RENDERED, async(...args)=>{log('CHARACTER_MESSAGE_RENDERED', args);onMessageDone(...args);return;});
     eventSource.on(event_types.USER_MESSAGE_RENDERED, async(...args)=>{log('USER_MESSAGE_RENDERED', args);onMessageDone(...args);return;});
     eventSource.on(event_types.MESSAGE_EDITED, async(...args)=>{log('MESSAGE_EDITED', args);onMessageEdited(...args);return;});
