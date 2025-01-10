@@ -1,8 +1,9 @@
 import { Generate, callPopup, chat, eventSource, event_types, messageFormatting, saveChatConditional, saveChatDebounced, saveSettingsDebounced, substituteParams } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
-import { delay } from '../../../utils.js';
-import { ContextMenu } from './src/ContextMenu.js';
-import { MenuItem } from './src/MenuItem.js';
+import { SlashCommand } from '../../../slash-commands/SlashCommand.js';
+import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from '../../../slash-commands/SlashCommandArgument.js';
+import { SlashCommandParser } from '../../../slash-commands/SlashCommandParser.js';
+import { delay, isTrueBoolean } from '../../../utils.js';
 
 
 
@@ -55,7 +56,7 @@ const insertContinueData = (mes)=>{
 const onGenerationStarted = async(type, namedArgs, dryRun)=>{
     log('onGenerationStarted', { type, dryRun });
     if (dryRun || !['continue', 'normal', 'swipe'].includes(type)) return;
-    const mes = chat.slice(-1)[0];
+    const mes = chat.at(-1);
     insertContinueData(mes);
     if (type == 'continue') {
         isListening = true;
@@ -64,7 +65,7 @@ const onGenerationStarted = async(type, namedArgs, dryRun)=>{
         isListening = true;
         startMes = '';
     }
-    log('[GENERATION_STARTED]', chat.slice(-1)[0].mes, chat.slice(-1)[0]);
+    log('[GENERATION_STARTED]', chat.at(-1).mes, chat.at(-1));
 };
 
 let hoverMes;
@@ -77,7 +78,7 @@ const onUnhover = ()=>{
 const onHover = ()=>{
     if (busy()) return;
     // log('[HOVER]');
-    const mes = chat.slice(-1)[0];
+    const mes = chat.at(-1);
     if (mes.continueSwipe?.parent?.length) {
         let swipe;
         let swipes = mes.continueHistory;
@@ -106,6 +107,85 @@ const onHover = ()=>{
     }
 };
 
+const undo = ()=>{
+    if (busy()) return;
+    log('[UNDO]');
+    const mes = chat.at(-1);
+    if (mes.continueSwipe?.parent?.length) {
+        let swipeIdx;
+        let swipe;
+        let swipes = mes.continueHistory;
+        swipes[mes.continueSwipe.parent[0]].active.pop();
+        let text = '';
+        mes.continueSwipe.parent.forEach(idx=>{
+            swipeIdx = idx;
+            swipe = swipes[idx];
+            swipes = swipe.swipes;
+            text += swipe.mes;
+        });
+        mes.mes = text;
+        mes.continueSwipe = swipe;
+        mes.continueSwipeId = swipeIdx;
+        let messageText = substituteParams(text);
+        messageText = messageFormatting(
+            messageText,
+            mes.name,
+            false,
+            mes.is_user,
+            null,
+        );
+        document.querySelector('#chat .last_mes .mes_text').innerHTML = messageText;
+        saveChatConditional();
+        eventSource.emit(event_types.MESSAGE_EDITED, chat.length - 1);
+    }
+};
+const regenerate = async()=>{
+    if (busy()) return;
+    log('[REGEN]');
+    const mes = chat.at(-1);
+    if (mes.continueSwipe?.parent?.length) {
+        let swipeIdx;
+        let swipe;
+        let swipes = mes.continueHistory;
+        let text = '';
+        mes.continueSwipe.parent.forEach(idx=>{
+            swipeIdx = idx;
+            swipe = swipes[idx];
+            swipes = swipe.swipes;
+            text += swipe.mes;
+        });
+        mes.mes = text;
+        mes.continueSwipe = swipe;
+        mes.continueSwipeId = swipeIdx;
+        let messageText = substituteParams(`${text} ...`);
+        messageText = messageFormatting(
+            messageText,
+            mes.name,
+            false,
+            mes.is_user,
+            null,
+        );
+        document.querySelector('#chat .last_mes .mes_text').innerHTML = messageText;
+        await Generate('continue');
+        log('DONE');
+    }
+};
+const toggleFavorite = (mesIdx, setFav = null)=>{
+    const mesId = Number(mesIdx);
+    const mes = chat[mesId];
+    if (!mes.swipe_info) {
+        mes.swipe_info = [];
+    }
+    if (!mes.swipe_info[mes.swipe_id]) {
+        mes.swipe_info[mes.swipe_id] = {};
+    }
+    const isFav = !(setFav ?? !mes.swipe_info[mes.swipe_id].isFavorite);
+    mes.swipe_info[mes.swipe_id].isFavorite = !isFav;
+    updateFav(mesId);
+    saveChatDebounced();
+    return !isFav;
+};
+
 const buildSwipeDom = (mfc, el)=>{
     const dom = document.createElement('div'); {
         dom.classList.add('mfc--root');
@@ -117,38 +197,7 @@ const buildSwipeDom = (mfc, el)=>{
             undoTrigger.title = 'Remove last continue';
             undoTrigger.addEventListener('pointerenter', onHover);
             undoTrigger.addEventListener('pointerleave', onUnhover);
-            undoTrigger.addEventListener('click', ()=>{
-                if (busy()) return;
-                log('[UNDO]');
-                const mes = chat.slice(-1)[0];
-                if (mes.continueSwipe?.parent?.length) {
-                    let swipeIdx;
-                    let swipe;
-                    let swipes = mes.continueHistory;
-                    swipes[mes.continueSwipe.parent[0]].active.pop();
-                    let text = '';
-                    mes.continueSwipe.parent.forEach(idx=>{
-                        swipeIdx = idx;
-                        swipe = swipes[idx];
-                        swipes = swipe.swipes;
-                        text += swipe.mes;
-                    });
-                    mes.mes = text;
-                    mes.continueSwipe = swipe;
-                    mes.continueSwipeId = swipeIdx;
-                    let messageText = substituteParams(text);
-                    messageText = messageFormatting(
-                        messageText,
-                        mes.name,
-                        false,
-                        mes.is_user,
-                        null,
-                    );
-                    document.querySelector('#chat .last_mes .mes_text').innerHTML = messageText;
-                    saveChatConditional();
-                    eventSource.emit(event_types.MESSAGE_EDITED, chat.length - 1);
-                }
-            });
+            undoTrigger.addEventListener('click', ()=>undo());
             dom.append(undoTrigger);
         }
         const redoTrigger = document.createElement('span'); {
@@ -164,36 +213,7 @@ const buildSwipeDom = (mfc, el)=>{
             regen.title = 'Regenerate last continue';
             regen.addEventListener('pointerenter', onHover);
             regen.addEventListener('pointerleave', onUnhover);
-            regen.addEventListener('click', async()=>{
-                if (busy()) return;
-                log('[REGEN]');
-                const mes = chat.slice(-1)[0];
-                if (mes.continueSwipe?.parent?.length) {
-                    let swipeIdx;
-                    let swipe;
-                    let swipes = mes.continueHistory;
-                    let text = '';
-                    mes.continueSwipe.parent.forEach(idx=>{
-                        swipeIdx = idx;
-                        swipe = swipes[idx];
-                        swipes = swipe.swipes;
-                        text += swipe.mes;
-                    });
-                    mes.mes = text;
-                    mes.continueSwipe = swipe;
-                    mes.continueSwipeId = swipeIdx;
-                    let messageText = substituteParams(`${text} ...`);
-                    messageText = messageFormatting(
-                        messageText,
-                        mes.name,
-                        false,
-                        mes.is_user,
-                    );
-                    document.querySelector('#chat .last_mes .mes_text').innerHTML = messageText;
-                    await Generate('continue');
-                    log('DONE');
-                }
-            });
+            regen.addEventListener('click', async()=>regenerate());
             dom.append(regen);
         }
         const swipesTrigger = document.createElement('span'); {
@@ -205,7 +225,7 @@ const buildSwipeDom = (mfc, el)=>{
                 if (busy()) return;
                 log('[SWIPES]');
 
-                // const mes = chat.slice(-1)[0];
+                // const mes = chat.at(-1);
                 const mes = chat[Number(swipesTrigger.closest('[mesid]').getAttribute('mesid'))];
                 if (mes.continueHistory[mes.swipe_id ?? 0]) {
                     const renderTree = (swipe, act, isRoot=false)=>{
@@ -304,20 +324,7 @@ const buildSwipeDom = (mfc, el)=>{
             fav.classList.add('mfc--action');
             fav.textContent = '⭐';
             fav.title = 'Favorite this swipe';
-            fav.addEventListener('click', ()=>{
-                const mesId = Number(swipesTrigger.closest('[mesid]').getAttribute('mesid'));
-                const mes = chat[mesId];
-                if (!mes.swipe_info) {
-                    mes.swipe_info = [];
-                }
-                if (!mes.swipe_info[mes.swipe_id]) {
-                    mes.swipe_info[mes.swipe_id] = {};
-                }
-                const isFav = mes.swipe_info[mes.swipe_id].isFavorite;
-                mes.swipe_info[mes.swipe_id].isFavorite = !isFav;
-                updateFav(mesId);
-                saveChatDebounced();
-            });
+            fav.addEventListener('click', ()=>toggleFavorite(dom.closest('.mes[mesid]').getAttribute('mesid')));
             dom.append(fav);
         }
     }
@@ -576,6 +583,48 @@ const onChatChanged = ()=>{
 
 
 
+
+SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'continue-undo',
+    callback: ()=>{
+        undo();
+        return '';
+    },
+    helpString: 'Undo last continue.',
+}));
+SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'continue-regenerate',
+    callback: async()=>{
+        await regenerate();
+        return '';
+    },
+    helpString: 'Regenerate last continue.',
+}));
+SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'swipes-favorite',
+    /**
+     *
+     * @param {import('../../../slash-commands/SlashCommand.js').NamedArguments&{
+     *  message:string,
+     * }} args
+     * @param {*} value
+     * @returns
+     */
+    callback: async(args, value)=>{
+        const setFav = value?.length ? isTrueBoolean(value) : null;
+        return JSON.stringify(toggleFavorite(args.message ?? chat.length - 1, setFav));
+    },
+    namedArgumentList: [
+        SlashCommandNamedArgument.fromProps({ name: 'message',
+            description: 'message id',
+            typeList: [ARGUMENT_TYPE.NUMBER],
+            defaultValue: 'last message id',
+        }),
+    ],
+    unnamedArgumentList: [
+        SlashCommandArgument.fromProps({ description: 'explicitly set favorite state instead of toggling',
+            typeList: [ARGUMENT_TYPE.BOOLEAN],
+        }),
+    ],
+    helpString: 'Toggle swipe as favorite.',
+}));
 
 eventSource.on(event_types.APP_READY, ()=>{
     const addSettings = () => {
