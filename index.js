@@ -94,6 +94,7 @@ const onHover = ()=>{
             mes.name,
             false,
             mes.is_user,
+            null,
         );
         const el = document.querySelector('#chat .last_mes .mes_text');
         hoverMes = el;
