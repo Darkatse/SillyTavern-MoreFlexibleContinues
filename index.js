@@ -329,7 +329,6 @@ const onStopped = ()=>{
     isListening = false;
 };
 const onMessageDone = async(mesIdx)=>{
-    addSwipesButton(mesIdx, true);
     makeSwipeDom();
     const mes = chat[mesIdx];
     insertContinueData(mes);
@@ -459,72 +458,6 @@ const onSwipe = async(mesId)=>{
     }
 };
 
-const addSwipesButtons = ()=>{
-    Array.from(document.querySelectorAll('#chat > .mes[mesid]')).forEach(it=>addSwipesButton(it.getAttribute('mesid')));
-};
-const addSwipesButton = (mesIdx, isForced = false)=>{
-    const container = document.querySelector(`#chat > .mes[mesid="${mesIdx}"] .extraMesButtons`);
-    if (!isForced && container.querySelector('.mfc--swipes')) return;
-    Array.from(container.querySelectorAll('.mfc--swipes')).forEach(it=>it.remove());
-    const mes = chat[mesIdx];
-    const btn = document.createElement('div'); {
-        btn.classList.add('mfc--swipes', 'fa-solid', 'fa-layer-group');
-        btn.title = `View swipes (${mes.swipes?.length ?? 0})`;
-        btn.addEventListener('click', async(evt)=>{
-            const dom = document.createElement('div'); {
-                dom.classList.add('mfc--swipesModal');
-                const notice = document.createElement('div'); {
-                    notice.textContent = 'Click to copy swipe';
-                    dom.append(notice);
-                }
-                (mes.swipes ?? []).forEach((text, idx)=>{
-                    const swipe = document.createElement('div'); {
-                        swipe.classList.add('mfc--swipe');
-                        swipe.classList.add('mes_text');
-                        if (mes.swipe_info?.[idx]?.isFavorite) {
-                            swipe.classList.add('mfc--isFav');
-                        }
-                        if (idx == mes.swipe_id) {
-                            swipe.classList.add('mfc--current');
-                        }
-                        let messageText = substituteParams(text);
-                        messageText = messageFormatting(
-                            messageText,
-                            mes.name,
-                            false,
-                            mes.is_user,
-                            null,
-                        );
-                        swipe.innerHTML = messageText;
-                        swipe.addEventListener('click', async()=>{
-                            const ta = document.createElement('textarea'); {
-                                ta.value = text;
-                                ta.style.position = 'fixed';
-                                ta.style.inset = '0';
-                                document.body.append(ta);
-                                ta.focus();
-                                ta.select();
-                                try {
-                                    document.execCommand('copy');
-                                } catch (err) {
-                                    console.error('Unable to copy to clipboard', err);
-                                }
-                                ta.remove();
-                            }
-                            swipe.classList.add('mfc--flash');
-                            await delay(1000);
-                            swipe.classList.remove('mfc--flash');
-                        });
-                        dom.append(swipe);
-                    }
-                });
-            }
-            await callPopup(dom, 'text', null, { wide:true, large:true });
-        });
-        container.firstElementChild.insertAdjacentElement('beforebegin', btn);
-    }
-};
-
 const onChatChanged = ()=>{
     // migrate swipe favorite from extra to swipe info
     {
@@ -541,7 +474,6 @@ const onChatChanged = ()=>{
         });
     }
     makeSwipeDom();
-    addSwipesButtons();
 };
 
 
