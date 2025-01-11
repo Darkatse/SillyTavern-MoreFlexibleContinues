@@ -171,21 +171,6 @@ const regenerate = async()=>{
         log('DONE');
     }
 };
-const toggleFavorite = (mesIdx, setFav = null)=>{
-    const mesId = Number(mesIdx);
-    const mes = chat[mesId];
-    if (!mes.swipe_info) {
-        mes.swipe_info = [];
-    }
-    if (!mes.swipe_info[mes.swipe_id]) {
-        mes.swipe_info[mes.swipe_id] = {};
-    }
-    const isFav = !(setFav ?? !mes.swipe_info[mes.swipe_id].isFavorite);
-    mes.swipe_info[mes.swipe_id].isFavorite = !isFav;
-    updateFav(mesId);
-    saveChatDebounced();
-    return !isFav;
-};
 
 const buildSwipeDom = (mfc, el)=>{
     const dom = document.createElement('div'); {
@@ -314,14 +299,6 @@ const buildSwipeDom = (mfc, el)=>{
             });
             dom.append(cont);
         }
-        const fav = document.createElement('span'); {
-            fav.classList.add('mfc--fav');
-            fav.classList.add('mfc--action');
-            fav.textContent = '⭐';
-            fav.title = 'Favorite this swipe';
-            fav.addEventListener('click', ()=>toggleFavorite(dom.closest('.mes[mesid]').getAttribute('mesid')));
-            dom.append(fav);
-        }
     }
     return dom;
 };
@@ -345,15 +322,7 @@ const makeSwipeDom = ()=>{
         } else if (!settings.buttonsBottom && el.querySelector('.mfc--root[data-mfc="bottom"]')) {
             el.querySelector('.mfc--root[data-mfc="bottom"]').remove();
         }
-        updateFav(el.getAttribute('mesid'));
     }
-};
-
-const updateFav = (mesId)=>{
-    const mes = chat[mesId];
-    const isFav = mes.swipe_info?.[mes.swipe_id]?.isFavorite ?? false;
-    const favButtons = [...document.querySelectorAll(`#chat .mes[mesid="${mesId}"] .mfc--fav`)];
-    favButtons.forEach(it=>it.classList[isFav ? 'add' : 'remove']('mfc--isFav'));
 };
 
 const onStopped = ()=>{
@@ -476,7 +445,6 @@ const onSwipe = async(mesId)=>{
         }
         mes.swipe_info[mes.swipe_id].isFavorite = false;
     }
-    updateFav(mesId);
     if (mes.continueHistory) {
         let swipes = mes.continueHistory;
         let swipe;
@@ -592,33 +560,6 @@ SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'continue-reg
         return '';
     },
     helpString: 'Regenerate last continue.',
-}));
-SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'swipes-favorite',
-    /**
-     *
-     * @param {import('../../../slash-commands/SlashCommand.js').NamedArguments&{
-     *  message:string,
-     * }} args
-     * @param {*} value
-     * @returns
-     */
-    callback: async(args, value)=>{
-        const setFav = value?.length ? isTrueBoolean(value) : null;
-        return JSON.stringify(toggleFavorite(args.message ?? chat.length - 1, setFav));
-    },
-    namedArgumentList: [
-        SlashCommandNamedArgument.fromProps({ name: 'message',
-            description: 'message id',
-            typeList: [ARGUMENT_TYPE.NUMBER],
-            defaultValue: 'last message id',
-        }),
-    ],
-    unnamedArgumentList: [
-        SlashCommandArgument.fromProps({ description: 'explicitly set favorite state instead of toggling',
-            typeList: [ARGUMENT_TYPE.BOOLEAN],
-        }),
-    ],
-    helpString: 'Toggle swipe as favorite.',
 }));
 
 eventSource.on(event_types.APP_READY, ()=>{
