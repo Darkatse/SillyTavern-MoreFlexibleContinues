@@ -201,12 +201,6 @@ const buildSwipeDom = (mfc, el)=>{
             undoTrigger.addEventListener('click', ()=>undo());
             dom.append(undoTrigger);
         }
-        const redoTrigger = document.createElement('span'); {
-            redoTrigger.classList.add('mfc--redo');
-            redoTrigger.classList.add('mfc--action');
-            redoTrigger.textContent = '↷';
-            // dom.append(redoTrigger);
-        }
         const regen = document.createElement('span'); {
             regen.classList.add('mfc--regen');
             regen.classList.add('mfc--action');
