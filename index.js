@@ -1,9 +1,8 @@
-import { Generate, callPopup, chat, eventSource, event_types, messageFormatting, saveChatConditional, saveSettingsDebounced, substituteParams } from '../../../../script.js';
+import { Generate, chat, eventSource, event_types, messageFormatting, saveChatConditional, saveSettingsDebounced, substituteParams } from '../../../../script.js';
 import { extension_settings } from '../../../extensions.js';
 import { SlashCommand } from '../../../slash-commands/SlashCommand.js';
-import { ARGUMENT_TYPE, SlashCommandArgument, SlashCommandNamedArgument } from '../../../slash-commands/SlashCommandArgument.js';
 import { SlashCommandParser } from '../../../slash-commands/SlashCommandParser.js';
-import { delay, isTrueBoolean } from '../../../utils.js';
+import { delay } from '../../../utils.js';
 
 
 
