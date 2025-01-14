@@ -3,6 +3,7 @@ import { extension_settings } from '../../../extensions.js';
 import { SlashCommand } from '../../../slash-commands/SlashCommand.js';
 import { SlashCommandParser } from '../../../slash-commands/SlashCommandParser.js';
 import { delay } from '../../../utils.js';
+import { injectQuickActionsWrapper } from './lib/injectQuickActionsWrapper.js';
 
 
 
@@ -305,10 +306,11 @@ const makeSwipeDom = ()=>{
     for (const mes of chat) {
         insertContinueData(mes);
     }
+    injectQuickActionsWrapper();
     const els = Array.from(document.querySelectorAll('#chat .mes'));
     for (const el of els) {
-        const elTop = el.querySelector('.name_text').parentElement;
-        const elBot = el;
+        const elTop = el.querySelector('.lacommon--quickActions[data-lacommon--anchor="top"]');
+        const elBot = el.querySelector('.lacommon--quickActions[data-lacommon--anchor="bottom"]');
 
         if (settings.buttonsTop && !el.querySelector('.mfc--root[data-mfc="top"]')) {
             elTop.append(buildSwipeDom('top', el));

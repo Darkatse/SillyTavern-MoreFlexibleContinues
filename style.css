@@ -1,3 +1,13 @@
+.lacommon--quickActions {
+  display: flex;
+  gap: 0.25em;
+  align-items: baseline;
+}
+.lacommon--quickActions[data-lacommon--anchor="bottom"] {
+  position: absolute;
+  bottom: 0.125em;
+  left: 0.5em;
+}
 @keyframes mfc--flash {
   0% {
     filter: invert(0);
@@ -9,10 +19,8 @@
     filter: invert(0);
   }
 }
-.mfc--root[data-mfc="bottom"] {
-  position: absolute;
-  bottom: 0.125em;
-  left: 0.5em;
+.mfc--root {
+  display: contents;
 }
 .mfc--root > .mfc--action:not(.mfc--swipes,.mfc--fav) {
   display: none;
