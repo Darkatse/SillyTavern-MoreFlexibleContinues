@@ -306,7 +306,6 @@ const makeSwipeDom = ()=>{
     for (const mes of chat) {
         insertContinueData(mes);
     }
-    injectQuickActionsWrapper();
     const els = Array.from(document.querySelectorAll('#chat .mes'));
     for (const el of els) {
         const elTop = el.querySelector('.lacommon--quickActions[data-lacommon--anchor="top"]');
@@ -547,3 +546,4 @@ eventSource.on(event_types.APP_READY, ()=>{
     eventSource.on(event_types.MESSAGE_DELETED, async(...args)=>{log('MESSAGE_DELETED', args);return makeSwipeDom(...args);});
     eventSource.on(event_types.MESSAGE_SWIPED, async(...args)=>{log('MESSAGE_SWIPED', args);onSwipe(...args);return;});
 });
+injectQuickActionsWrapper();
