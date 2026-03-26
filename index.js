@@ -495,6 +495,7 @@ SlashCommandParser.addCommandObject(SlashCommand.fromProps({ name: 'continue-reg
 }));
 
 eventSource.on(event_types.APP_READY, ()=>{
+    injectQuickActionsWrapper();
     const addSettings = () => {
         const html = `
 		<div class="mfc--settings">
@@ -546,4 +547,3 @@ eventSource.on(event_types.APP_READY, ()=>{
     eventSource.on(event_types.MESSAGE_DELETED, async(...args)=>{log('MESSAGE_DELETED', args);return makeSwipeDom(...args);});
     eventSource.on(event_types.MESSAGE_SWIPED, async(...args)=>{log('MESSAGE_SWIPED', args);onSwipe(...args);return;});
 });
-injectQuickActionsWrapper();
